@@ -1,10 +1,9 @@
 package org.decaywood;
 
 import org.decaywood.utils.FileLoader;
-import org.decaywood.utils.RequestParaBuilder;
+import org.decaywood.utils.StringUtils;
 
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.util.Map;
 
 /**
  * @author: decaywood
@@ -13,56 +12,36 @@ import java.net.URL;
 public interface CookieProcessor {
 
 
-    default void updateCookie(String website) throws Exception {
+    default void updateCookie(String website) {
 
         GlobalSystemConfigLoader.loadConfig();
 
-        String areacode = System.getProperty("areaCode");
-        String userID = System.getProperty("userID");
-        String passwd = System.getProperty("password");
         String cookies = System.getProperty("cookies");
-        boolean rememberMe = Boolean.parseBoolean(System.getProperty("rememberMe"));
-
-        HttpURLConnection connection = null;
-        if (userID != null && passwd != null) {
-            connection = login(areacode, userID, passwd, rememberMe);
-        }
-        try {
-            connection = connection == null ?
-                    (HttpURLConnection) new URL(website).openConnection() : connection;
-            connection.connect();
-
-            String cookie = cookies != null ? cookies : connection.getHeaderFields().get("Set-Cookie")
-                    .stream()
-                    .map(x -> x.split(";")[0].concat(";"))
-                    .filter(x -> x.contains("token=") || x.contains("s="))
-                    .reduce("", String::concat);
-            FileLoader.updateCookie(cookie, website);
-        } finally {
-            if (connection != null) connection.disconnect();
+        if (StringUtils.isNotNull(cookies) && cookies.trim().length() > 0) {
+            FileLoader.updateCookie(cookies.trim(), website);
+            return;
         }
 
+        Map<String, String> cookieValues = FileLoader.loadCookieValues();
+        if (cookieValues.isEmpty()) {
+            throw new IllegalStateException("未检测到有效的雪球 Cookie，请在 config.sys 中配置 xueqiu.cookie.* 属性或手动注入 cookies 参数。");
+        }
+        StringBuilder builder = new StringBuilder();
+        cookieValues.forEach((key, value) -> {
+            if (builder.length() > 0) {
+                builder.append("; ");
+            }
+            builder.append(key).append("=").append(value);
+        });
+        FileLoader.updateCookie(builder.toString(), website);
     }
 
-    default HttpURLConnection login(String areacode,
-                                    String userID,
-                                    String passwd,
-                                    boolean rememberMe) throws Exception {
-
-        areacode = areacode == null ? "86" : areacode;
-        if (userID == null || passwd == null) {
-            throw new IllegalArgumentException("null parameter: userID or password");
-        }
-
-        RequestParaBuilder builder = new RequestParaBuilder("http://xueqiu.com/user/login")
-                .addParameter("areacode", areacode)
-                .addParameter("telephone", userID)
-                .addParameter("password", passwd)
-                .addParameter("remember_me", rememberMe ? "on" : "off");
-
-        URL url = new URL(builder.build());
-        return (HttpURLConnection) url.openConnection();
+    @Deprecated
+    default void login(String areacode,
+                       String userID,
+                       String passwd,
+                       boolean rememberMe) {
+        throw new UnsupportedOperationException("雪球登录已改版，请在浏览器登录后同步 Cookie 或接入专用自动化脚本。");
     }
-
 
 }
