@@ -61,7 +61,8 @@ public class StockToStockWithShareHolderTrendMapper extends AbstractMapper<Stock
         RequestParaBuilder builder = new RequestParaBuilder(target)
                 .addParameter("symbol", stock.getStockNo())
                 .addParameter("page", 1)
-                .addParameter("size", 500);
+                .addParameter("size", 500)
+                .addDynamicParameter("_", () -> String.valueOf(System.currentTimeMillis()));
 
         URL url = new URL(builder.build());
         String json = request(url);

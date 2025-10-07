@@ -72,7 +72,8 @@ public class StockToStockWithStockTrendMapper extends AbstractMapper<Stock, Stoc
                 .addParameter("period", period.toString())
                 .addParameter("type", "normal")
                 .addParameter("begin", from.getTime())
-                .addParameter("end", to.getTime());
+                .addParameter("end", to.getTime())
+                .addDynamicParameter("_", () -> String.valueOf(System.currentTimeMillis()));
 
         URL url = new URL(builder.build());
 
